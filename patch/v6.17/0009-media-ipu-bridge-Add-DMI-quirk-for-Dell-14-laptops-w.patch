@@ -1,4 +1,4 @@
-From 7744ef632d2b2dbb367f8f73df4a1b9f6e20e2fd Mon Sep 17 00:00:00 2001
+From 717778c07686c4336322fddd02c102bab17de446 Mon Sep 17 00:00:00 2001
 From: Jimmy Su <jimmy.su@intel.com>
 Date: Tue, 24 Mar 2026 14:25:32 +0800
 Subject: [PATCH 3/3] media: ipu-bridge: Add DMI quirk for Dell 14 laptops with
@@ -13,7 +13,7 @@ The rotation value should be reported by 180 degree by module ID.
 Signed-off-by: Jimmy Su <jimmy.su@intel.com>
 
 diff --git a/drivers/media/pci/intel/ipu-bridge.c b/drivers/media/pci/intel/ipu-bridge.c
-index f9c7ac8f4147..52302b3b7705 100644
+index f9c7ac8f4147..a748ec8b0fd5 100644
 --- a/drivers/media/pci/intel/ipu-bridge.c
 +++ b/drivers/media/pci/intel/ipu-bridge.c
 @@ -36,6 +36,14 @@
@@ -31,7 +31,7 @@ index f9c7ac8f4147..52302b3b7705 100644
  /*
   * Extend this array with ACPI Hardware IDs of devices known to be working
   * plus the number of link-frequencies expected by their drivers, along with
-@@ -121,6 +129,20 @@ static const struct dmi_system_id upside_down_sensor_dmi_ids[] = {
+@@ -121,6 +129,12 @@ static const struct dmi_system_id upside_down_sensor_dmi_ids[] = {
  		},
  		.driver_data = "OVTI08F4",
  	},
@@ -40,19 +40,11 @@ index f9c7ac8f4147..52302b3b7705 100644
 +			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "Dell Pro 14 Premium PA14260"),
 +		},
-+		.driver_data = "CJFOE90_B",
-+	},
-+	{
-+		.matches = {
-+			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
-+			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "Dell Pro 14 Premium PA14260"),
-+		},
-+		.driver_data = "BBG809N3A_B",
 +	},
  	{} /* Terminating entry */
  };
  
-@@ -275,11 +297,27 @@ static u32 ipu_bridge_parse_rotation(struct acpi_device *adev,
+@@ -275,11 +289,30 @@ static u32 ipu_bridge_parse_rotation(struct acpi_device *adev,
  				     struct ipu_sensor_ssdb *ssdb)
  {
  	const struct dmi_system_id *dmi_id;
@@ -62,19 +54,22 @@ index f9c7ac8f4147..52302b3b7705 100644
  	if (dmi_id && acpi_dev_hid_match(adev, dmi_id->driver_data))
  		return 180;
  
-+	obj = acpi_evaluate_dsm_typed(adev->handle,
-+				      &sensor_module_guid, 0x00,
-+				      0x01, NULL, ACPI_TYPE_STRING);
++	if (dmi_id) {
++		obj = acpi_evaluate_dsm_typed(adev->handle,
++					      &sensor_module_guid, 0x00,
++					      0x01, NULL, ACPI_TYPE_STRING);
 +
-+	if (obj) {
-+		if (dmi_id && (!strcmp(dmi_id->driver_data, obj->string.pointer))) {
-+			ACPI_FREE(obj);
-+			return 180;
++		if (obj) {
++			/* Compare sensor model ID variants */
++			if (!strcmp(obj->string.pointer, "CJFOE90_B") ||
++			    !strcmp(obj->string.pointer, "BBG809N3A_B")) {
++				ACPI_FREE(obj);
++				return 180;
++			} else {
++				dev_err(ADEV_DEV(adev), "ACPI _DSM call failed or returned wrong type\n");
++				ACPI_FREE(obj);
++			}
 +		}
-+		ACPI_FREE(obj);
-+	} else {
-+		dev_err(ADEV_DEV(adev), "ACPI _DSM call failed or returned wrong type\n");
-+		ACPI_FREE(obj);
 +	}
 +
  	switch (ssdb->degree) {
