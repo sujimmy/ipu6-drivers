@@ -1,0 +1,25 @@
+From c9ac17cce6c4cbd54e881b0cbf6ab5eb4a372f7c Mon Sep 17 00:00:00 2001
+From: Jimmy Su <jimmy.su@intel.com>
+Date: Thu, 11 Jun 2026 14:01:51 +0800
+Subject: [PATCH 3/3] platform/x86: int3472: modify handshake delay for ov05c10
+ sensor
+
+
+diff --git a/drivers/platform/x86/intel/int3472/discrete.c b/drivers/platform/x86/intel/int3472/discrete.c
+index 1c65ce87cde0..3e237b0aa1ec 100644
+--- a/drivers/platform/x86/intel/int3472/discrete.c
++++ b/drivers/platform/x86/intel/int3472/discrete.c
+@@ -230,8 +230,8 @@ static void int3472_get_con_id_and_polarity(struct int3472_discrete_device *int3
+ 	case INT3472_GPIO_TYPE_HANDSHAKE:
+ 		*con_id = "dvdd";
+ 		*gpio_flags = GPIO_ACTIVE_HIGH;
+-		/* Setups using a handshake pin need 25 ms enable delay */
+-		*enable_time_us = 25 * USEC_PER_MSEC;
++		/* Setups using a handshake pin need 50 ms enable delay */
++		*enable_time_us = 50 * USEC_PER_MSEC; // Himax needs 50 ms
+ 		break;
+ 	default:
+ 		*con_id = "unknown";
+-- 
+2.34.1
+
